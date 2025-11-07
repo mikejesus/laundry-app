@@ -1,0 +1,230 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User model linked to Clerk authentication
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String   @unique
+  firstName String?
+  lastName  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  customers     Customer[]
+  orders        Order[]
+  expenses      Expense[]
+  suppliers     Supplier[]
+  inventory     Inventory[]
+  staff         Staff[]
+  payments      Payment[]
+  servicePrices ServicePrice[]
+
+  @@index([clerkId])
+}
+
+// Customer management
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String
+  address   String?
+  email     String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Foreign keys
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relations
+  orders Order[]
+
+  @@index([userId])
+  @@index([phone])
+}
+
+// Order management
+model Order {
+  id           String   @id @default(cuid())
+  orderNumber  String   @unique
+  serviceType  String   // e.g., "Wash & Fold", "Dry Cleaning", "Ironing"
+  totalAmount  Float
+  paidAmount   Float    @default(0)
+  status       String   @default("pending") // pending, in_progress, ready, completed, cancelled
+  dueDate      DateTime
+  pickupDate   DateTime?
+  deliveryDate DateTime?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Foreign keys
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relations
+  items    OrderItem[]
+  payments Payment[]
+
+  @@index([userId])
+  @@index([customerId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+// Individual items in an order
+model OrderItem {
+  id       String @id @default(cuid())
+  itemType String // e.g., "Shirt", "Pants", "Dress", "Bedsheet"
+  quantity Int
+  price    Float
+  notes    String?
+
+  // Foreign keys
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+// Expense tracking
+model Expense {
+  id          String    @id @default(cuid())
+  category    String    // e.g., "Utilities", "Supplies", "Salary", "Rent", "Maintenance"
+  amount      Float
+  description String
+  date        DateTime  @default(now())
+  receiptUrl  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Foreign keys
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([category])
+  @@index([date])
+}
+
+// Supplier management
+model Supplier {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String
+  email     String?
+  address   String?
+  category  String   // e.g., "Detergent", "Equipment", "Packaging"
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Foreign keys
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relations
+  expenses Expense[]
+
+  @@index([userId])
+  @@index([category])
+}
+
+// Inventory management
+model Inventory {
+  id            String   @id @default(cuid())
+  name          String
+  quantity      Float
+  unit          String   // e.g., "kg", "liters", "pieces"
+  minStockLevel Float
+  category      String?  // e.g., "Detergent", "Softener", "Hangers"
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Foreign keys
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([quantity])
+}
+
+// Staff management
+model Staff {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String
+  email     String?
+  role      String   // e.g., "Manager", "Cleaner", "Delivery", "Cashier"
+  salary    Float
+  hireDate  DateTime @default(now())
+  status    String   @default("active") // active, inactive, terminated
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Foreign keys
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([role])
+  @@index([status])
+}
+
+// Payment tracking
+model Payment {
+  id            String   @id @default(cuid())
+  amount        Float
+  method        String   // e.g., "Cash", "Card", "Mobile Money", "Bank Transfer"
+  date          DateTime @default(now())
+  transactionId String?
+  notes         String?
+  createdAt     DateTime @default(now())
+
+  // Foreign keys
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([orderId])
+  @@index([date])
+}
+
+// Service pricing management
+model ServicePrice {
+  id          String   @id @default(cuid())
+  serviceType String   // e.g., "wash_and_iron", "dry_cleaning", "iron_only"
+  itemType    String   // e.g., "Shirt", "Trouser/Pants", "Dress"
+  price       Float    // Price for this service-item combination
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Foreign keys
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Unique constraint: one price per service-item combination per user
+  @@unique([userId, serviceType, itemType])
+  @@index([userId])
+  @@index([serviceType])
+}

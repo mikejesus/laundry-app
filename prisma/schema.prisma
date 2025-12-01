@@ -75,6 +75,8 @@ model Order {
   customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  staffId    String?
+  staff      Staff?   @relation(fields: [staffId], references: [id], onDelete: SetNull)
 
   // Relations
   items    OrderItem[]
@@ -82,6 +84,7 @@ model Order {
 
   @@index([userId])
   @@index([customerId])
+  @@index([staffId])
   @@index([status])
   @@index([dueDate])
 }
@@ -168,25 +171,71 @@ model Inventory {
 
 // Staff management
 model Staff {
-  id        String   @id @default(cuid())
-  name      String
-  phone     String
-  email     String?
-  role      String   // e.g., "Manager", "Cleaner", "Delivery", "Cashier"
-  salary    Float
-  hireDate  DateTime @default(now())
-  status    String   @default("active") // active, inactive, terminated
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(cuid())
+  name           String
+  phone          String
+  email          String?
+  role           String   // e.g., "Manager", "Attendant", "Delivery"
+  salary         Float    // Monthly salary
+  commissionRate Float    @default(0) // Commission percentage (0-100)
+  hireDate       DateTime @default(now())
+  status         String   @default("active") // active, inactive, terminated
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   // Foreign keys
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // Relations
+  attendances    Attendance[]
+  salaryPayments SalaryPayment[]
+  ordersHandled  Order[]
+
   @@index([userId])
   @@index([role])
   @@index([status])
+}
+
+// Attendance tracking
+model Attendance {
+  id        String   @id @default(cuid())
+  date      DateTime
+  status    String   // present, absent, leave, half_day
+  checkIn   DateTime?
+  checkOut  DateTime?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  // Foreign keys
+  staffId String
+  staff   Staff  @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, date])
+  @@index([staffId])
+  @@index([date])
+}
+
+// Salary payment tracking
+model SalaryPayment {
+  id              String   @id @default(cuid())
+  amount          Float    // Amount paid
+  commission      Float    @default(0) // Commission earned
+  totalPaid       Float    // Total = amount + commission
+  month           String   // e.g., "2024-01" for January 2024
+  paymentDate     DateTime @default(now())
+  paymentMethod   String   // Cash, Bank Transfer, etc.
+  ordersCompleted Int      @default(0) // Number of orders completed in the period
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  // Foreign keys
+  staffId String
+  staff   Staff  @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([staffId])
+  @@index([month])
 }
 
 // Payment tracking

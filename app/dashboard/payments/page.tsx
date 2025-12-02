@@ -17,7 +17,10 @@ export default async function PaymentsPage() {
     take: 50,
   });
 
-  const totalPayments = payments.reduce((sum, payment) => sum + payment.amount, 0);
+  const totalPayments = payments.reduce(
+    (sum, payment) => sum + payment.amount,
+    0
+  );
 
   return (
     <div>
@@ -29,19 +32,33 @@ export default async function PaymentsPage() {
       </div>
 
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h3 className="text-sm font-medium text-gray-600 mb-2">Total Payments Received</h3>
-        <p className="text-3xl font-bold text-gray-900">${totalPayments.toFixed(2)}</p>
+        <h3 className="text-sm font-medium text-gray-600 mb-2">
+          Total Payments Received
+        </h3>
+        <p className="text-3xl font-bold text-gray-900">
+          ₦{totalPayments.toFixed(2)}
+        </p>
       </div>
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order #</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Method</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Date
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Order #
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Customer
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Method
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Amount
+              </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -70,7 +87,7 @@ export default async function PaymentsPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">
-                    ${payment.amount.toFixed(2)}
+                    ₦{payment.amount.toFixed(2)}
                   </td>
                 </tr>
               ))

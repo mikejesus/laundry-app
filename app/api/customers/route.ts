@@ -1,24 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { validateNigerianPhone, formatNigerianPhone, validateEmail } from '@/lib/utils/validation';
 
 // GET /api/customers - List all customers with search
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth();
+    const session = await auth();
 
-    if (!userId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user from database
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // Get search query from URL params
@@ -27,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     // Build where clause for search
     const whereClause = {
-      userId: user.id,
+      userId: session.user.id,
       ...(search && {
         OR: [
           { name: { contains: search, mode: 'insensitive' as const } },
@@ -93,19 +84,10 @@ export async function GET(request: NextRequest) {
 // POST /api/customers - Create new customer
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth();
+    const session = await auth();
 
-    if (!userId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user from database
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // Parse request body
@@ -153,7 +135,7 @@ export async function POST(request: NextRequest) {
     // Check if customer with same phone already exists
     const existingCustomer = await prisma.customer.findFirst({
       where: {
-        userId: user.id,
+        userId: session.user.id,
         phone: formattedPhone,
       },
     });
@@ -173,7 +155,7 @@ export async function POST(request: NextRequest) {
         email: email?.trim() || null,
         address: address?.trim() || null,
         notes: notes?.trim() || null,
-        userId: user.id,
+        userId: session.user.id,
       },
     });
 

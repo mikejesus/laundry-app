@@ -1,19 +1,24 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('Starting seed...');
 
-  // Create a demo user (you'll need to replace this clerkId with a real one from Clerk)
+  // Hash the demo password
+  const hashedPassword = await bcrypt.hash('demo123', 12);
+
+  // Create a demo user
   const demoUser = await prisma.user.upsert({
-    where: { clerkId: 'demo_user_clerk_id' },
+    where: { email: 'demo@laundry.com' },
     update: {},
     create: {
-      clerkId: 'demo_user_clerk_id',
       email: 'demo@laundry.com',
+      password: hashedPassword,
       firstName: 'Demo',
       lastName: 'User',
+      role: 'admin',
     },
   });
 

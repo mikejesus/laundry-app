@@ -1,26 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth, clerkClient } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
-async function ensureUserExists(clerkUserId: string) {
-  let user = await prisma.user.findUnique({
-    where: { clerkId: clerkUserId },
-  });
-
-  if (!user) {
-    const clerkUser = await (await clerkClient()).users.getUser(clerkUserId);
-    user = await prisma.user.create({
-      data: {
-        clerkId: clerkUserId,
-        email: clerkUser.emailAddresses[0]?.emailAddress || "",
-        firstName: clerkUser.firstName || "",
-        lastName: clerkUser.lastName || "",
-      },
-    });
-  }
-
-  return user;
-}
 
 // GET /api/inventory/[id] - Get item details
 export async function GET(
@@ -28,13 +8,11 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId: clerkUserId } = await auth();
+    const session = await auth();
 
-    if (!clerkUserId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const user = await ensureUserExists(clerkUserId);
 
     const item = await prisma.inventory.findUnique({
       where: { id: params.id },
@@ -44,7 +22,7 @@ export async function GET(
       return NextResponse.json({ error: "Item not found" }, { status: 404 });
     }
 
-    if (item.userId !== user.id) {
+    if (item.userId !== session.user.id) {
       return NextResponse.json(
         { error: "Unauthorized to access this item" },
         { status: 403 }
@@ -67,13 +45,11 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId: clerkUserId } = await auth();
+    const session = await auth();
 
-    if (!clerkUserId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const user = await ensureUserExists(clerkUserId);
 
     const item = await prisma.inventory.findUnique({
       where: { id: params.id },
@@ -83,7 +59,7 @@ export async function PUT(
       return NextResponse.json({ error: "Item not found" }, { status: 404 });
     }
 
-    if (item.userId !== user.id) {
+    if (item.userId !== session.user.id) {
       return NextResponse.json(
         { error: "Unauthorized to update this item" },
         { status: 403 }
@@ -138,13 +114,11 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId: clerkUserId } = await auth();
+    const session = await auth();
 
-    if (!clerkUserId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const user = await ensureUserExists(clerkUserId);
 
     const item = await prisma.inventory.findUnique({
       where: { id: params.id },
@@ -154,7 +128,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Item not found" }, { status: 404 });
     }
 
-    if (item.userId !== user.id) {
+    if (item.userId !== session.user.id) {
       return NextResponse.json(
         { error: "Unauthorized to delete this item" },
         { status: 403 }

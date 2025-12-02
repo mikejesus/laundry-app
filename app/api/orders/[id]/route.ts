@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { isValidStatusTransition } from '@/lib/utils/orders';
 
@@ -9,19 +9,10 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId } = await auth();
+    const session = await auth();
 
-    if (!userId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user from database
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     const orderId = params.id;
@@ -30,7 +21,7 @@ export async function GET(
     const order = await prisma.order.findFirst({
       where: {
         id: orderId,
-        userId: user.id,
+        userId: session.user.id,
       },
       include: {
         customer: true,
@@ -61,19 +52,10 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId } = await auth();
+    const session = await auth();
 
-    if (!userId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user from database
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     const orderId = params.id;
@@ -82,7 +64,7 @@ export async function PUT(
     const existingOrder = await prisma.order.findFirst({
       where: {
         id: orderId,
-        userId: user.id,
+        userId: session.user.id,
       },
     });
 
@@ -127,7 +109,7 @@ export async function PUT(
             amount: paymentAmount,
             method: paymentMethod,
             orderId: order.id,
-            userId: user.id,
+            userId: session.user.id,
           },
         });
 
@@ -163,19 +145,10 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId } = await auth();
+    const session = await auth();
 
-    if (!userId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user from database
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     const orderId = params.id;
@@ -184,7 +157,7 @@ export async function DELETE(
     const order = await prisma.order.findFirst({
       where: {
         id: orderId,
-        userId: user.id,
+        userId: session.user.id,
       },
     });
 

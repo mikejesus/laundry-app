@@ -1,37 +1,16 @@
 import Navbar from "@/components/Navbar";
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { userId } = await auth();
+  const session = await auth();
 
-  if (!userId) {
+  if (!session?.user) {
     redirect("/sign-in");
-  }
-
-  // Get or create user in database
-  const clerkUser = await currentUser();
-
-  if (clerkUser) {
-    await prisma.user.upsert({
-      where: { clerkId: userId },
-      update: {
-        email: clerkUser.emailAddresses[0]?.emailAddress || "",
-        firstName: clerkUser.firstName,
-        lastName: clerkUser.lastName,
-      },
-      create: {
-        clerkId: userId,
-        email: clerkUser.emailAddresses[0]?.emailAddress || "",
-        firstName: clerkUser.firstName,
-        lastName: clerkUser.lastName,
-      },
-    });
   }
 
   return (

@@ -1,26 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth, clerkClient } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
-async function ensureUserExists(clerkUserId: string) {
-  let user = await prisma.user.findUnique({
-    where: { clerkId: clerkUserId },
-  });
-
-  if (!user) {
-    const clerkUser = await (await clerkClient()).users.getUser(clerkUserId);
-    user = await prisma.user.create({
-      data: {
-        clerkId: clerkUserId,
-        email: clerkUser.emailAddresses[0]?.emailAddress || "",
-        firstName: clerkUser.firstName || "",
-        lastName: clerkUser.lastName || "",
-      },
-    });
-  }
-
-  return user;
-}
 
 // GET /api/staff/[id]/salary-payments - Get salary payment history
 export async function GET(
@@ -28,13 +8,11 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId: clerkUserId } = await auth();
+    const session = await auth();
 
-    if (!clerkUserId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const user = await ensureUserExists(clerkUserId);
 
     // Verify staff member belongs to user
     const staffMember = await prisma.staff.findUnique({
@@ -48,7 +26,7 @@ export async function GET(
       );
     }
 
-    if (staffMember.userId !== user.id) {
+    if (staffMember.userId !== session.user.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
@@ -88,13 +66,11 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId: clerkUserId } = await auth();
+    const session = await auth();
 
-    if (!clerkUserId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const user = await ensureUserExists(clerkUserId);
 
     // Verify staff member belongs to user
     const staffMember = await prisma.staff.findUnique({
@@ -108,7 +84,7 @@ export async function POST(
       );
     }
 
-    if (staffMember.userId !== user.id) {
+    if (staffMember.userId !== session.user.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 

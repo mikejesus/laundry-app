@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 // DELETE /api/service-prices/[id] - Delete a service price
@@ -8,9 +8,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId } = await auth();
+    const session = await auth();
 
-    if (!userId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -28,7 +28,7 @@ export async function DELETE(
       );
     }
 
-    if (servicePrice.userId !== userId) {
+    if (servicePrice.userId !== session.user.id) {
       return NextResponse.json(
         { error: "Unauthorized to delete this service price" },
         { status: 403 }

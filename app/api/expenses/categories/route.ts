@@ -1,44 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth, clerkClient } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
-async function ensureUserExists(clerkUserId: string) {
-  let user = await prisma.user.findUnique({
-    where: { clerkId: clerkUserId },
-  });
-
-  if (!user) {
-    const clerkUser = await (await clerkClient()).users.getUser(clerkUserId);
-    user = await prisma.user.create({
-      data: {
-        clerkId: clerkUserId,
-        email: clerkUser.emailAddresses[0]?.emailAddress || "",
-        firstName: clerkUser.firstName || "",
-        lastName: clerkUser.lastName || "",
-      },
-    });
-  }
-
-  return user;
-}
 
 // GET /api/expenses/categories - Get expense by category summary
 export async function GET(request: NextRequest) {
   try {
-    const { userId: clerkUserId } = await auth();
+    const session = await auth();
 
-    if (!clerkUserId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const user = await ensureUserExists(clerkUserId);
 
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
     // Build where clause
-    const where: any = { userId: user.id };
+    const where: any = { userId: session.user.id };
 
     if (startDate || endDate) {
       where.date = {};

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { validateNigerianPhone, formatNigerianPhone, validateEmail } from '@/lib/utils/validation';
 
@@ -9,19 +9,10 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId } = await auth();
+    const session = await auth();
 
-    if (!userId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user from database
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     const customerId = params.id;
@@ -30,7 +21,7 @@ export async function GET(
     const customer = await prisma.customer.findFirst({
       where: {
         id: customerId,
-        userId: user.id,
+        userId: session.user.id,
       },
       include: {
         orders: {
@@ -82,19 +73,10 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId } = await auth();
+    const session = await auth();
 
-    if (!userId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user from database
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     const customerId = params.id;
@@ -103,7 +85,7 @@ export async function PUT(
     const existingCustomer = await prisma.customer.findFirst({
       where: {
         id: customerId,
-        userId: user.id,
+        userId: session.user.id,
       },
     });
 
@@ -156,7 +138,7 @@ export async function PUT(
     // Check if another customer with same phone exists
     const duplicateCustomer = await prisma.customer.findFirst({
       where: {
-        userId: user.id,
+        userId: session.user.id,
         phone: formattedPhone,
         id: { not: customerId },
       },
@@ -200,19 +182,10 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId } = await auth();
+    const session = await auth();
 
-    if (!userId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user from database
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     const customerId = params.id;
@@ -221,7 +194,7 @@ export async function DELETE(
     const customer = await prisma.customer.findFirst({
       where: {
         id: customerId,
-        userId: user.id,
+        userId: session.user.id,
       },
       include: {
         _count: {

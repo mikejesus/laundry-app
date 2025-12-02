@@ -1,47 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth, clerkClient } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
-// Helper function to ensure user exists in database
-async function ensureUserExists(clerkUserId: string) {
-  // Check if user exists
-  let user = await prisma.user.findUnique({
-    where: { clerkId: clerkUserId },
-  });
-
-  // If not, create the user
-  if (!user) {
-    const clerkUser = await (await clerkClient()).users.getUser(clerkUserId);
-    user = await prisma.user.create({
-      data: {
-        clerkId: clerkUserId,
-        email: clerkUser.emailAddresses[0]?.emailAddress || "",
-        firstName: clerkUser.firstName || "",
-        lastName: clerkUser.lastName || "",
-      },
-    });
-  }
-
-  return user;
-}
 
 // GET /api/service-prices - List all service prices for the user
 export async function GET(request: NextRequest) {
   try {
-    const { userId: clerkUserId } = await auth();
+    const session = await auth();
 
-    if (!clerkUserId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    // Ensure user exists in database
-    const user = await ensureUserExists(clerkUserId);
 
     const { searchParams } = new URL(request.url);
     const serviceType = searchParams.get("serviceType");
 
     // Build where clause
-    const where: any = { userId: user.id };
+    const where: any = { userId: session.user.id };
     if (serviceType) {
       where.serviceType = serviceType;
     }
@@ -67,14 +41,11 @@ export async function GET(request: NextRequest) {
 // POST /api/service-prices - Create or update service price (upsert)
 export async function POST(request: NextRequest) {
   try {
-    const { userId: clerkUserId } = await auth();
+    const session = await auth();
 
-    if (!clerkUserId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    // Ensure user exists in database
-    const user = await ensureUserExists(clerkUserId);
 
     const body = await request.json();
     const { serviceType, itemType, price, bulk } = body;
@@ -86,7 +57,7 @@ export async function POST(request: NextRequest) {
           prisma.servicePrice.upsert({
             where: {
               userId_serviceType_itemType: {
-                userId: user.id,
+                userId: session.user.id,
                 serviceType: item.serviceType,
                 itemType: item.itemType,
               },
@@ -95,7 +66,7 @@ export async function POST(request: NextRequest) {
               price: item.price,
             },
             create: {
-              userId: user.id,
+              userId: session.user.id,
               serviceType: item.serviceType,
               itemType: item.itemType,
               price: item.price,
@@ -129,7 +100,7 @@ export async function POST(request: NextRequest) {
     const servicePrice = await prisma.servicePrice.upsert({
       where: {
         userId_serviceType_itemType: {
-          userId: user.id,
+          userId: session.user.id,
           serviceType,
           itemType,
         },
@@ -138,7 +109,7 @@ export async function POST(request: NextRequest) {
         price,
       },
       create: {
-        userId: user.id,
+        userId: session.user.id,
         serviceType,
         itemType,
         price,

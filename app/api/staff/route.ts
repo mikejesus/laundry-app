@@ -1,37 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth, clerkClient } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
-async function ensureUserExists(clerkUserId: string) {
-  let user = await prisma.user.findUnique({
-    where: { clerkId: clerkUserId },
-  });
-
-  if (!user) {
-    const clerkUser = await (await clerkClient()).users.getUser(clerkUserId);
-    user = await prisma.user.create({
-      data: {
-        clerkId: clerkUserId,
-        email: clerkUser.emailAddresses[0]?.emailAddress || "",
-        firstName: clerkUser.firstName || "",
-        lastName: clerkUser.lastName || "",
-      },
-    });
-  }
-
-  return user;
-}
 
 // GET /api/staff - List all staff members
 export async function GET(request: NextRequest) {
   try {
-    const { userId: clerkUserId } = await auth();
+    const session = await auth();
 
-    if (!clerkUserId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const user = await ensureUserExists(clerkUserId);
 
     const { searchParams } = new URL(request.url);
     const role = searchParams.get("role");
@@ -39,7 +17,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search");
 
     // Build where clause
-    const where: any = { userId: user.id };
+    const where: any = { userId: session.user.id };
 
     if (role && role !== "all") {
       where.role = role;
@@ -104,13 +82,11 @@ export async function GET(request: NextRequest) {
 // POST /api/staff - Add new staff member
 export async function POST(request: NextRequest) {
   try {
-    const { userId: clerkUserId } = await auth();
+    const session = await auth();
 
-    if (!clerkUserId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const user = await ensureUserExists(clerkUserId);
 
     const body = await request.json();
     const {
@@ -151,7 +127,7 @@ export async function POST(request: NextRequest) {
 
     const staffMember = await prisma.staff.create({
       data: {
-        userId: user.id,
+        userId: session.user.id,
         name,
         phone,
         email: email || null,

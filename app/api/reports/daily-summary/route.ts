@@ -1,37 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth, clerkClient } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
-async function ensureUserExists(clerkUserId: string) {
-  let user = await prisma.user.findUnique({
-    where: { clerkId: clerkUserId },
-  });
-
-  if (!user) {
-    const clerkUser = await (await clerkClient()).users.getUser(clerkUserId);
-    user = await prisma.user.create({
-      data: {
-        clerkId: clerkUserId,
-        email: clerkUser.emailAddresses[0]?.emailAddress || "",
-        firstName: clerkUser.firstName || "",
-        lastName: clerkUser.lastName || "",
-      },
-    });
-  }
-
-  return user;
-}
 
 // GET /api/reports/daily-summary - Get today's summary
 export async function GET(request: NextRequest) {
   try {
-    const { userId: clerkUserId } = await auth();
+    const session = await auth();
 
-    if (!clerkUserId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const user = await ensureUserExists(clerkUserId);
 
     // Get start and end of today
     const today = new Date();
@@ -42,7 +20,7 @@ export async function GET(request: NextRequest) {
     // Get today's orders
     const todaysOrders = await prisma.order.findMany({
       where: {
-        userId: user.id,
+        userId: session.user.id,
         createdAt: {
           gte: today,
           lt: tomorrow,
@@ -56,7 +34,7 @@ export async function GET(request: NextRequest) {
     // Get today's payments (including payments for older orders)
     const todaysPayments = await prisma.payment.findMany({
       where: {
-        userId: user.id,
+        userId: session.user.id,
         date: {
           gte: today,
           lt: tomorrow,

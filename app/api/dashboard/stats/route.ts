@@ -1,37 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth, clerkClient } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
-async function ensureUserExists(clerkUserId: string) {
-  let user = await prisma.user.findUnique({
-    where: { clerkId: clerkUserId },
-  });
-
-  if (!user) {
-    const clerkUser = await (await clerkClient()).users.getUser(clerkUserId);
-    user = await prisma.user.create({
-      data: {
-        clerkId: clerkUserId,
-        email: clerkUser.emailAddresses[0]?.emailAddress || "",
-        firstName: clerkUser.firstName || "",
-        lastName: clerkUser.lastName || "",
-      },
-    });
-  }
-
-  return user;
-}
 
 // GET /api/dashboard/stats - Overall statistics
 export async function GET(request: NextRequest) {
   try {
-    const { userId: clerkUserId } = await auth();
+    const session = await auth();
 
-    if (!clerkUserId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const user = await ensureUserExists(clerkUserId);
 
     // Get date ranges
     const now = new Date();
@@ -51,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     // Get all orders
     const allOrders = await prisma.order.findMany({
-      where: { userId: user.id },
+      where: { userId: session.user.id },
       include: {
         customer: {
           select: {
@@ -129,7 +107,7 @@ export async function GET(request: NextRequest) {
 
     // Get all payments for payment method breakdown
     const allPayments = await prisma.payment.findMany({
-      where: { userId: user.id },
+      where: { userId: session.user.id },
     });
 
     const paymentMethodBreakdown = allPayments.reduce((acc, payment) => {

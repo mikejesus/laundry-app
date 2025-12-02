@@ -1,24 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { generateOrderNumber, validateOrderItems, calculateOrderTotal } from '@/lib/utils/orders';
 
 // GET /api/orders - List orders with filters
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth();
+    const session = await auth();
 
-    if (!userId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user from database
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // Get query parameters
@@ -31,7 +22,7 @@ export async function GET(request: NextRequest) {
 
     // Build where clause
     const whereClause: any = {
-      userId: user.id,
+      userId: session.user.id,
     };
 
     // Filter by status
@@ -92,19 +83,10 @@ export async function GET(request: NextRequest) {
 // POST /api/orders - Create new order
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth();
+    const session = await auth();
 
-    if (!userId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user from database
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // Parse request body
@@ -154,7 +136,7 @@ export async function POST(request: NextRequest) {
     const customer = await prisma.customer.findFirst({
       where: {
         id: customerId,
-        userId: user.id,
+        userId: session.user.id,
       },
     });
 
@@ -184,7 +166,7 @@ export async function POST(request: NextRequest) {
           dueDate: new Date(dueDate),
           notes: notes || null,
           customerId,
-          userId: user.id,
+          userId: session.user.id,
           items: {
             create: items.map((item: any) => ({
               itemType: item.itemType,
@@ -207,7 +189,7 @@ export async function POST(request: NextRequest) {
             amount: paymentAmount,
             method: paymentMethod,
             orderId: newOrder.id,
-            userId: user.id,
+            userId: session.user.id,
           },
         });
 

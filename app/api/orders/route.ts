@@ -3,6 +3,9 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { generateOrderNumber, validateOrderItems, calculateOrderTotal } from '@/lib/utils/orders';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 // GET /api/orders - List orders with filters
 export async function GET(request: NextRequest) {
   try {

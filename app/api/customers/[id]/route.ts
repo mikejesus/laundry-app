@@ -3,6 +3,9 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { validateNigerianPhone, formatNigerianPhone, validateEmail } from '@/lib/utils/validation';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 // GET /api/customers/[id] - Get customer details with order history
 export async function GET(
   request: NextRequest,

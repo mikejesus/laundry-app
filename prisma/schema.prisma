@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -54,7 +54,7 @@ model User {
   id            String    @id @default(cuid())
   email         String    @unique
   emailVerified DateTime?
-  password      String?   // Hashed password for credentials provider
+  password      String? // Hashed password for credentials provider
   firstName     String?
   lastName      String?
   image         String?
@@ -104,18 +104,18 @@ model Customer {
 
 // Order management
 model Order {
-  id           String   @id @default(cuid())
-  orderNumber  String   @unique
-  serviceType  String   // e.g., "Wash & Fold", "Dry Cleaning", "Ironing"
+  id           String    @id @default(cuid())
+  orderNumber  String    @unique
+  serviceType  String // e.g., "Wash & Fold", "Dry Cleaning", "Ironing"
   totalAmount  Float
-  paidAmount   Float    @default(0)
-  status       String   @default("pending") // pending, in_progress, ready, completed, cancelled
+  paidAmount   Float     @default(0)
+  status       String    @default("pending") // pending, in_progress, ready, completed, cancelled
   dueDate      DateTime
   pickupDate   DateTime?
   deliveryDate DateTime?
   notes        String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   // Foreign keys
   customerId String
@@ -138,7 +138,7 @@ model Order {
 
 // Individual items in an order
 model OrderItem {
-  id       String @id @default(cuid())
+  id       String  @id @default(cuid())
   itemType String // e.g., "Shirt", "Pants", "Dress", "Bedsheet"
   quantity Int
   price    Float
@@ -153,14 +153,14 @@ model OrderItem {
 
 // Expense tracking
 model Expense {
-  id          String    @id @default(cuid())
-  category    String    // e.g., "Utilities", "Supplies", "Salary", "Rent", "Maintenance"
+  id          String   @id @default(cuid())
+  category    String // e.g., "Utilities", "Supplies", "Salary", "Rent", "Maintenance"
   amount      Float
   description String
-  date        DateTime  @default(now())
+  date        DateTime @default(now())
   receiptUrl  String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Foreign keys
   supplierId String?
@@ -180,7 +180,7 @@ model Supplier {
   phone     String
   email     String?
   address   String?
-  category  String   // e.g., "Detergent", "Equipment", "Packaging"
+  category  String // e.g., "Detergent", "Equipment", "Packaging"
   notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -201,9 +201,9 @@ model Inventory {
   id            String   @id @default(cuid())
   name          String
   quantity      Float
-  unit          String   // e.g., "kg", "liters", "pieces"
+  unit          String // e.g., "kg", "liters", "pieces"
   minStockLevel Float
-  category      String?  // e.g., "Detergent", "Softener", "Hangers"
+  category      String? // e.g., "Detergent", "Softener", "Hangers"
   notes         String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -222,8 +222,8 @@ model Staff {
   name           String
   phone          String
   email          String?
-  role           String   // e.g., "Manager", "Attendant", "Delivery"
-  salary         Float    // Monthly salary
+  role           String // e.g., "Manager", "Attendant", "Delivery"
+  salary         Float // Monthly salary
   commissionRate Float    @default(0) // Commission percentage (0-100)
   hireDate       DateTime @default(now())
   status         String   @default("active") // active, inactive, terminated
@@ -247,13 +247,13 @@ model Staff {
 
 // Attendance tracking
 model Attendance {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   date      DateTime
-  status    String   // present, absent, leave, half_day
+  status    String // present, absent, leave, half_day
   checkIn   DateTime?
   checkOut  DateTime?
   notes     String?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   // Foreign keys
   staffId String
@@ -267,12 +267,12 @@ model Attendance {
 // Salary payment tracking
 model SalaryPayment {
   id              String   @id @default(cuid())
-  amount          Float    // Amount paid
+  amount          Float // Amount paid
   commission      Float    @default(0) // Commission earned
-  totalPaid       Float    // Total = amount + commission
-  month           String   // e.g., "2024-01" for January 2024
+  totalPaid       Float // Total = amount + commission
+  month           String // e.g., "2024-01" for January 2024
   paymentDate     DateTime @default(now())
-  paymentMethod   String   // Cash, Bank Transfer, etc.
+  paymentMethod   String // Cash, Bank Transfer, etc.
   ordersCompleted Int      @default(0) // Number of orders completed in the period
   notes           String?
   createdAt       DateTime @default(now())
@@ -289,7 +289,7 @@ model SalaryPayment {
 model Payment {
   id            String   @id @default(cuid())
   amount        Float
-  method        String   // e.g., "Cash", "Card", "Mobile Money", "Bank Transfer"
+  method        String // e.g., "Cash", "Card", "Mobile Money", "Bank Transfer"
   date          DateTime @default(now())
   transactionId String?
   notes         String?
@@ -309,9 +309,9 @@ model Payment {
 // Service pricing management
 model ServicePrice {
   id          String   @id @default(cuid())
-  serviceType String   // e.g., "wash_and_iron", "dry_cleaning", "iron_only"
-  itemType    String   // e.g., "Shirt", "Trouser/Pants", "Dress"
-  price       Float    // Price for this service-item combination
+  serviceType String // e.g., "wash_and_iron", "dry_cleaning", "iron_only"
+  itemType    String // e.g., "Shirt", "Trouser/Pants", "Dress"
+  price       Float // Price for this service-item combination
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

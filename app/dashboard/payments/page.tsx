@@ -24,10 +24,10 @@ export default async function PaymentsPage() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Payments</h1>
-          <p className="text-gray-600 mt-2">Track payment history</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Payments</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-2">Track payment history</p>
         </div>
       </div>
 
@@ -35,7 +35,7 @@ export default async function PaymentsPage() {
         <h3 className="text-sm font-medium text-gray-600 mb-2">
           Total Payments Received
         </h3>
-        <p className="text-3xl font-bold text-gray-900">
+        <p className="text-2xl sm:text-3xl font-bold text-gray-900">
           ₦{totalPayments.toFixed(2)}
         </p>
       </div>

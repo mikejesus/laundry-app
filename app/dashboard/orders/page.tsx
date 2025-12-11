@@ -116,24 +116,25 @@ export default function OrdersPage() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Orders</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Orders</h1>
           <p className="text-gray-600 mt-2">
             Manage your laundry orders ({orders.length} total)
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
           <button
             onClick={() => setIsPricingModalOpen(true)}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center gap-2"
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center gap-2 text-sm sm:text-base"
           >
             <DollarSign className="w-5 h-5" />
-            Manage Pricing
+            <span className="hidden sm:inline">Manage Pricing</span>
+            <span className="sm:hidden">Pricing</span>
           </button>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2 text-sm sm:text-base"
           >
             <Plus className="w-5 h-5" />
             New Order
@@ -143,10 +144,10 @@ export default function OrdersPage() {
 
       {/* Status Filters */}
       <div className="mb-6">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
           <button
             onClick={() => setStatusFilter("all")}
-            className={`px-4 py-2 rounded-lg font-medium transition ${
+            className={`px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-sm sm:text-base ${
               statusFilter === "all"
                 ? "bg-blue-600 text-white"
                 : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
@@ -156,7 +157,7 @@ export default function OrdersPage() {
           </button>
           <button
             onClick={() => setStatusFilter("received")}
-            className={`px-4 py-2 rounded-lg font-medium transition ${
+            className={`px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-sm sm:text-base ${
               statusFilter === "received"
                 ? "bg-yellow-600 text-white"
                 : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
@@ -166,7 +167,7 @@ export default function OrdersPage() {
           </button>
           <button
             onClick={() => setStatusFilter("in_progress")}
-            className={`px-4 py-2 rounded-lg font-medium transition ${
+            className={`px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-sm sm:text-base ${
               statusFilter === "in_progress"
                 ? "bg-blue-600 text-white"
                 : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
@@ -176,7 +177,7 @@ export default function OrdersPage() {
           </button>
           <button
             onClick={() => setStatusFilter("ready")}
-            className={`px-4 py-2 rounded-lg font-medium transition ${
+            className={`px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-sm sm:text-base ${
               statusFilter === "ready"
                 ? "bg-purple-600 text-white"
                 : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
@@ -186,7 +187,7 @@ export default function OrdersPage() {
           </button>
           <button
             onClick={() => setStatusFilter("delivered")}
-            className={`px-4 py-2 rounded-lg font-medium transition ${
+            className={`px-4 py-2 rounded-lg font-medium transition whitespace-nowrap text-sm sm:text-base ${
               statusFilter === "delivered"
                 ? "bg-green-600 text-white"
                 : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"

@@ -22,16 +22,10 @@ export default async function Home() {
             inventory, and grow your business.
           </p>
 
-          <div className="flex gap-4 justify-center mb-16">
-            <Link
-              href="/sign-up"
-              className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
-            >
-              Get Started
-            </Link>
+          <div className="flex justify-center mb-16">
             <Link
               href="/sign-in"
-              className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-50 transition border border-blue-600"
+              className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition shadow-lg hover:shadow-xl"
             >
               Sign In
             </Link>

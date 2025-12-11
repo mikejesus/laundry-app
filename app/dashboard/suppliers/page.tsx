@@ -11,12 +11,12 @@ export default async function SuppliersPage() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Suppliers</h1>
-          <p className="text-gray-600 mt-2">Manage your supplier contacts</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Suppliers</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-2">Manage your supplier contacts</p>
         </div>
-        <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+        <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition w-full sm:w-auto justify-center flex items-center gap-2">
           + Add Supplier
         </button>
       </div>

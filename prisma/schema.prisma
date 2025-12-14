@@ -106,7 +106,7 @@ model Customer {
 model Order {
   id           String    @id @default(cuid())
   orderNumber  String    @unique
-  serviceType  String // e.g., "Wash & Fold", "Dry Cleaning", "Ironing"
+  serviceType  String? // Optional - for backward compatibility, service type now at item level
   totalAmount  Float
   paidAmount   Float     @default(0)
   status       String    @default("pending") // pending, in_progress, ready, completed, cancelled
@@ -138,17 +138,19 @@ model Order {
 
 // Individual items in an order
 model OrderItem {
-  id       String  @id @default(cuid())
-  itemType String // e.g., "Shirt", "Pants", "Dress", "Bedsheet"
-  quantity Int
-  price    Float
-  notes    String?
+  id          String  @id @default(cuid())
+  itemType    String // e.g., "Shirt", "Pants", "Dress", "Bedsheet"
+  serviceType String  @default("wash_and_iron") // e.g., "wash_and_iron", "dry_cleaning", "iron_only"
+  quantity    Int
+  price       Float // Price per item for this service type
+  notes       String?
 
   // Foreign keys
   orderId String
   order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
+  @@index([serviceType])
 }
 
 // Expense tracking

@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       customerId,
-      serviceType,
+      serviceType, // Optional - now at item level
       items,
       dueDate,
       notes,
@@ -108,13 +108,6 @@ export async function POST(request: NextRequest) {
     if (!customerId) {
       return NextResponse.json(
         { error: 'Customer is required' },
-        { status: 400 }
-      );
-    }
-
-    if (!serviceType) {
-      return NextResponse.json(
-        { error: 'Service type is required' },
         { status: 400 }
       );
     }
@@ -162,7 +155,7 @@ export async function POST(request: NextRequest) {
       const newOrder = await tx.order.create({
         data: {
           orderNumber,
-          serviceType,
+          serviceType: serviceType || null, // Optional - service type now at item level
           totalAmount,
           paidAmount: 0,
           status: 'received',
@@ -173,6 +166,7 @@ export async function POST(request: NextRequest) {
           items: {
             create: items.map((item: any) => ({
               itemType: item.itemType,
+              serviceType: item.serviceType, // Now required at item level
               quantity: item.quantity,
               price: item.price,
               notes: item.notes || null,

@@ -37,7 +37,6 @@ export default function OrderFormModal({
 
   // Form state
   const [customerId, setCustomerId] = useState("");
-  const [serviceType, setServiceType] = useState("");
   const [dueDate, setDueDate] = useState(formatDateForInput(getDefaultDueDate()));
   const [notes, setNotes] = useState("");
   const [paymentAmount, setPaymentAmount] = useState("");
@@ -45,39 +44,43 @@ export default function OrderFormModal({
 
   // Items state with custom flag
   const [items, setItems] = useState<OrderItem[]>([
-    { itemType: "", quantity: 1, price: 0 },
+    { itemType: "", serviceType: "wash_and_iron", quantity: 1, price: 0 },
   ]);
   const [customItemFlags, setCustomItemFlags] = useState<boolean[]>([false]);
 
-  // Service-specific pricing
-  const [servicePrices, setServicePrices] = useState<Record<string, number>>({});
+  // Service-specific pricing for all service types
+  const [allServicePrices, setAllServicePrices] = useState<Record<string, Record<string, number>>>({});
 
   // Calculate total
   const totalAmount = calculateOrderTotal(items);
   const paymentAmountNum = parseFloat(paymentAmount) || 0;
   const balance = totalAmount - paymentAmountNum;
 
-  // Fetch service-specific prices when service type changes
+  // Fetch all service prices on component mount
   useEffect(() => {
-    if (serviceType) {
-      fetchServicePrices(serviceType);
-    }
-  }, [serviceType]);
+    fetchAllServicePrices();
+  }, []);
 
-  const fetchServicePrices = async (service: string) => {
+  const fetchAllServicePrices = async () => {
     try {
-      const response = await fetch(`/api/service-prices?serviceType=${service}`);
+      const response = await fetch(`/api/service-prices`);
       if (!response.ok) {
         console.error("Failed to fetch service prices");
         return;
       }
 
       const data = await response.json();
-      const pricesMap: Record<string, number> = {};
-      data.forEach((sp: { itemType: string; price: number }) => {
-        pricesMap[sp.itemType] = sp.price;
+
+      // Organize prices by service type and item type
+      const pricesMap: Record<string, Record<string, number>> = {};
+      data.forEach((sp: { serviceType: string; itemType: string; price: number }) => {
+        if (!pricesMap[sp.serviceType]) {
+          pricesMap[sp.serviceType] = {};
+        }
+        pricesMap[sp.serviceType][sp.itemType] = sp.price;
       });
-      setServicePrices(pricesMap);
+
+      setAllServicePrices(pricesMap);
     } catch (err) {
       console.error("Error fetching service prices:", err);
     }
@@ -87,21 +90,19 @@ export default function OrderFormModal({
   useEffect(() => {
     if (!isOpen) {
       setCustomerId("");
-      setServiceType("");
       setDueDate(formatDateForInput(getDefaultDueDate()));
       setNotes("");
       setPaymentAmount("");
       setPaymentMethod("");
-      setItems([{ itemType: "", quantity: 1, price: 0 }]);
+      setItems([{ itemType: "", serviceType: "wash_and_iron", quantity: 1, price: 0 }]);
       setCustomItemFlags([false]);
-      setServicePrices({});
       setError(null);
     }
   }, [isOpen]);
 
   // Add new item
   const addItem = () => {
-    setItems([...items, { itemType: "", quantity: 1, price: 0 }]);
+    setItems([...items, { itemType: "", serviceType: "wash_and_iron", quantity: 1, price: 0 }]);
     setCustomItemFlags([...customItemFlags, false]);
   };
 
@@ -127,8 +128,11 @@ export default function OrderFormModal({
       return;
     }
 
+    // Get the service type for this item
+    const serviceType = items[index].serviceType || "wash_and_iron";
+
     // Use service-specific price if available, otherwise use default
-    const price = servicePrices[itemType] || commonItem.defaultPrice;
+    const price = allServicePrices[serviceType]?.[itemType] || commonItem.defaultPrice;
 
     // Update both itemType and price in one go using functional setState
     setItems(prevItems => {
@@ -137,6 +141,24 @@ export default function OrderFormModal({
         ...newItems[index],
         itemType: commonItem.type,
         price: price
+      };
+      return newItems;
+    });
+  };
+
+  // Update price when service type changes
+  const updateItemServiceType = (index: number, serviceType: string) => {
+    setItems(prevItems => {
+      const newItems = [...prevItems];
+      const item = newItems[index];
+
+      // Get new price for this service type and item type combination
+      const newPrice = allServicePrices[serviceType]?.[item.itemType] || item.price;
+
+      newItems[index] = {
+        ...item,
+        serviceType,
+        price: newPrice
       };
       return newItems;
     });
@@ -153,22 +175,18 @@ export default function OrderFormModal({
         throw new Error("Please select a customer");
       }
 
-      if (!serviceType) {
-        throw new Error("Please select a service type");
-      }
-
-      // Filter out empty items
+      // Filter out empty items and validate
       const validItems = items.filter(
-        (item) => item.itemType.trim() && item.quantity > 0 && item.price > 0
+        (item) => item.itemType.trim() && item.serviceType.trim() && item.quantity > 0 && item.price > 0
       );
 
       if (validItems.length === 0) {
-        throw new Error("Please add at least one valid item");
+        throw new Error("Please add at least one valid item with service type");
       }
 
       const orderData = {
         customerId,
-        serviceType,
+        serviceType: null, // Service type is now at item level
         items: validItems,
         dueDate,
         notes: notes.trim() || undefined,
@@ -218,49 +236,25 @@ export default function OrderFormModal({
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Customer and Service Selection */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Customer */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Customer <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={customerId}
-              onChange={(e) => setCustomerId(e.target.value)}
-              required
-              disabled={loading}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Select customer</option>
-              {customers.map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.name} - {customer.phone}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Service Type */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Service Type <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={serviceType}
-              onChange={(e) => setServiceType(e.target.value)}
-              required
-              disabled={loading}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Select service</option>
-              {SERVICE_TYPES.map((service) => (
-                <option key={service.value} value={service.value}>
-                  {service.label}
-                </option>
-              ))}
-            </select>
-          </div>
+        {/* Customer Selection */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Customer <span className="text-red-500">*</span>
+          </label>
+          <select
+            value={customerId}
+            onChange={(e) => setCustomerId(e.target.value)}
+            required
+            disabled={loading}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Select customer</option>
+            {customers.map((customer) => (
+              <option key={customer.id} value={customer.id}>
+                {customer.name} - {customer.phone}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Items Section */}
@@ -280,102 +274,131 @@ export default function OrderFormModal({
             </button>
           </div>
 
-          <div className="space-y-3 max-h-64 overflow-y-auto">
+          <div className="space-y-3 max-h-96 overflow-y-auto">
             {items.map((item, index) => {
               const dropdownValue = customItemFlags[index] ? "custom" : item.itemType || "";
 
               return (
-              <div key={index} className="flex gap-2 items-start bg-gray-50 p-3 rounded-lg">
-                {/* Item Type */}
-                <div className="flex-1">
-                  <select
-                    value={dropdownValue}
-                    onChange={(e) => {
-                      const newFlags = [...customItemFlags];
-                      if (e.target.value === "custom") {
-                        // Switching to custom item mode
-                        newFlags[index] = true;
-                        setCustomItemFlags(newFlags);
-                        updateItem(index, "itemType", "");
-                        updateItem(index, "price", 0);
-                      } else if (e.target.value) {
-                        // Selecting a common item
-                        newFlags[index] = false;
-                        setCustomItemFlags(newFlags);
-                        selectCommonItem(index, e.target.value);
-                      } else {
-                        // Clearing selection
-                        newFlags[index] = false;
-                        setCustomItemFlags(newFlags);
-                        updateItem(index, "itemType", "");
-                        updateItem(index, "price", 0);
-                      }
-                    }}
-                    disabled={loading}
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  >
-                    <option value="">Select item</option>
-                    {COMMON_ITEMS.map((commonItem) => (
-                      <option key={commonItem.type} value={commonItem.type}>
-                        {commonItem.type}
-                      </option>
-                    ))}
-                    <option value="custom">Custom Item...</option>
-                  </select>
-                  {customItemFlags[index] && (
-                    <input
-                      type="text"
-                      placeholder="Enter custom item name"
-                      value={item.itemType}
-                      onChange={(e) => updateItem(index, "itemType", e.target.value)}
+              <div key={index} className="flex flex-col bg-gray-50 p-3 rounded-lg gap-2">
+                <div className="flex gap-2 items-start">
+                  {/* Item Type */}
+                  <div className="flex-1">
+                    <label className="text-xs text-gray-500 mb-1 block">Item</label>
+                    <select
+                      value={dropdownValue}
+                      onChange={(e) => {
+                        const newFlags = [...customItemFlags];
+                        if (e.target.value === "custom") {
+                          // Switching to custom item mode
+                          newFlags[index] = true;
+                          setCustomItemFlags(newFlags);
+                          updateItem(index, "itemType", "");
+                          updateItem(index, "price", 0);
+                        } else if (e.target.value) {
+                          // Selecting a common item
+                          newFlags[index] = false;
+                          setCustomItemFlags(newFlags);
+                          selectCommonItem(index, e.target.value);
+                        } else {
+                          // Clearing selection
+                          newFlags[index] = false;
+                          setCustomItemFlags(newFlags);
+                          updateItem(index, "itemType", "");
+                          updateItem(index, "price", 0);
+                        }
+                      }}
                       disabled={loading}
-                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 mt-1"
-                      autoFocus
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="">Select item</option>
+                      {COMMON_ITEMS.map((commonItem) => (
+                        <option key={commonItem.type} value={commonItem.type}>
+                          {commonItem.type}
+                        </option>
+                      ))}
+                      <option value="custom">Custom Item...</option>
+                    </select>
+                    {customItemFlags[index] && (
+                      <input
+                        type="text"
+                        placeholder="Enter custom item name"
+                        value={item.itemType}
+                        onChange={(e) => updateItem(index, "itemType", e.target.value)}
+                        disabled={loading}
+                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 mt-1"
+                        autoFocus
+                      />
+                    )}
+                  </div>
+
+                  {/* Service Type */}
+                  <div className="flex-1">
+                    <label className="text-xs text-gray-500 mb-1 block">Service</label>
+                    <select
+                      value={item.serviceType}
+                      onChange={(e) => updateItemServiceType(index, e.target.value)}
+                      disabled={loading}
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      {SERVICE_TYPES.map((service) => (
+                        <option key={service.value} value={service.value}>
+                          {service.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Remove Button */}
+                  <div className="pt-5">
+                    <button
+                      type="button"
+                      onClick={() => removeItem(index)}
+                      disabled={loading || items.length === 1}
+                      className="text-red-600 hover:text-red-800 disabled:opacity-30 disabled:cursor-not-allowed p-1"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 items-center">
+                  {/* Quantity */}
+                  <div className="w-24">
+                    <label className="text-xs text-gray-500 mb-1 block">Quantity</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={item.quantity}
+                      onChange={(e) => updateItem(index, "quantity", parseInt(e.target.value) || 1)}
+                      disabled={loading}
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      placeholder="Qty"
                     />
-                  )}
-                </div>
+                  </div>
 
-                {/* Quantity */}
-                <div className="w-20">
-                  <input
-                    type="number"
-                    min="1"
-                    value={item.quantity}
-                    onChange={(e) => updateItem(index, "quantity", parseInt(e.target.value) || 1)}
-                    disabled={loading}
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="Qty"
-                  />
-                </div>
+                  {/* Price */}
+                  <div className="w-28">
+                    <label className="text-xs text-gray-500 mb-1 block">Price (₦)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={item.price}
+                      onChange={(e) => updateItem(index, "price", parseFloat(e.target.value) || 0)}
+                      disabled={loading}
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      placeholder="Price"
+                    />
+                  </div>
 
-                {/* Price */}
-                <div className="w-24">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={item.price}
-                    onChange={(e) => updateItem(index, "price", parseFloat(e.target.value) || 0)}
-                    disabled={loading}
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="Price"
-                  />
+                  {/* Subtotal */}
+                  <div className="flex-1">
+                    <label className="text-xs text-gray-500 mb-1 block">Subtotal</label>
+                    <div className="px-2 py-1.5 text-sm text-gray-900 font-semibold">
+                      ₦{(item.quantity * item.price).toLocaleString()}
+                    </div>
+                  </div>
                 </div>
-
-                {/* Subtotal */}
-                <div className="w-24 px-2 py-1.5 text-sm text-gray-700 font-medium">
-                  ₦{(item.quantity * item.price).toLocaleString()}
-                </div>
-
-                {/* Remove Button */}
-                <button
-                  type="button"
-                  onClick={() => removeItem(index)}
-                  disabled={loading || items.length === 1}
-                  className="text-red-600 hover:text-red-800 disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
               </div>
               );
             })}

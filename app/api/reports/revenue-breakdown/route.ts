@@ -27,27 +27,33 @@ export async function GET(request: NextRequest) {
       dateFilter.lte = new Date(endDate);
     }
 
-    // Get all orders
+    // Get all orders with items
     const orders = await prisma.order.findMany({
       where: {
         userId: session.user.id,
         ...(Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {}),
       },
+      include: {
+        items: true,
+      },
     });
 
-    // Group by service type
-    const revenueByService = orders.reduce((acc, order) => {
-      if (!acc[order.serviceType]) {
-        acc[order.serviceType] = {
-          serviceType: order.serviceType,
-          totalRevenue: 0,
-          orderCount: 0,
-        };
-      }
-      acc[order.serviceType].totalRevenue += order.totalAmount;
-      acc[order.serviceType].orderCount += 1;
-      return acc;
-    }, {} as Record<string, { serviceType: string; totalRevenue: number; orderCount: number }>);
+    // Group by service type from order items
+    const revenueByService: Record<string, { serviceType: string; totalRevenue: number; itemCount: number }> = {};
+
+    orders.forEach((order) => {
+      order.items.forEach((item) => {
+        if (!revenueByService[item.serviceType]) {
+          revenueByService[item.serviceType] = {
+            serviceType: item.serviceType,
+            totalRevenue: 0,
+            itemCount: 0,
+          };
+        }
+        revenueByService[item.serviceType].totalRevenue += item.quantity * item.price;
+        revenueByService[item.serviceType].itemCount += item.quantity;
+      });
+    });
 
     return NextResponse.json({
       breakdown: Object.values(revenueByService).sort(

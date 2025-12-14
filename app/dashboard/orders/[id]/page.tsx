@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
   Printer,
+  Download,
+  Share2,
   Edit,
   DollarSign,
   Calendar,
@@ -27,6 +29,7 @@ import {
 interface OrderItem {
   id: string;
   itemType: string;
+  serviceType: string;
   quantity: number;
   price: number;
   notes: string | null;
@@ -42,7 +45,7 @@ interface Payment {
 interface Order {
   id: string;
   orderNumber: string;
-  serviceType: string;
+  serviceType: string | null; // Optional - now at item level
   totalAmount: number;
   paidAmount: number;
   status: string;
@@ -66,6 +69,8 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const receiptRef = useRef<HTMLDivElement>(null);
 
   // Payment form state
   const [showPaymentForm, setShowPaymentForm] = useState(false);
@@ -166,6 +171,125 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
     window.print();
   };
 
+  // Download receipt as PDF
+  const handleDownload = async () => {
+    if (!receiptRef.current || !order) return;
+
+    try {
+      setDownloading(true);
+
+      // Dynamically import html2pdf
+      const html2pdf = (await import('html2pdf.js')).default;
+
+      // Clone the receipt element to avoid modifying the original
+      const receiptClone = receiptRef.current.cloneNode(true) as HTMLElement;
+
+      // Remove shadow and adjust for PDF
+      receiptClone.style.boxShadow = 'none';
+      receiptClone.style.borderRadius = '0';
+      receiptClone.style.padding = '20px';
+
+      const opt = {
+        margin: [10, 10, 10, 10] as [number, number, number, number],
+        filename: `${order.orderNumber}-receipt.pdf`,
+        image: { type: 'jpeg' as const, quality: 1 },
+        html2canvas: {
+          scale: 3,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          windowWidth: 800
+        },
+        jsPDF: {
+          unit: 'mm',
+          format: 'a4',
+          orientation: 'portrait' as const,
+          compress: true
+        },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      };
+
+      await html2pdf().set(opt).from(receiptClone).save();
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      alert('Failed to download receipt. Please try again.');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  // Share receipt
+  const handleShare = async () => {
+    if (!receiptRef.current || !order) return;
+
+    try {
+      setDownloading(true);
+
+      // Generate PDF blob for sharing
+      const html2pdf = (await import('html2pdf.js')).default;
+
+      const receiptClone = receiptRef.current.cloneNode(true) as HTMLElement;
+      receiptClone.style.boxShadow = 'none';
+      receiptClone.style.borderRadius = '0';
+      receiptClone.style.padding = '20px';
+
+      const opt = {
+        margin: [10, 10, 10, 10] as [number, number, number, number],
+        filename: `${order.orderNumber}-receipt.pdf`,
+        image: { type: 'jpeg' as const, quality: 1 },
+        html2canvas: {
+          scale: 3,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          windowWidth: 800
+        },
+        jsPDF: {
+          unit: 'mm',
+          format: 'a4',
+          orientation: 'portrait' as const,
+          compress: true
+        },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      };
+
+      // Generate PDF as blob
+      const pdfBlob = await html2pdf().set(opt).from(receiptClone).output('blob');
+
+      // Create file from blob
+      const file = new File([pdfBlob], `${order.orderNumber}-receipt.pdf`, {
+        type: 'application/pdf',
+      });
+
+      // Check if Web Share API is available and supports files
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: `Receipt - ${order.orderNumber}`,
+          text: `Order Receipt for ${order.customer.name}\nTotal: ₦${order.totalAmount.toLocaleString()}\nBalance: ₦${(order.totalAmount - order.paidAmount).toLocaleString()}`,
+          files: [file],
+        });
+      } else {
+        // Fallback: Download the PDF
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${order.orderNumber}-receipt.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        alert('Receipt downloaded! You can now share the PDF file from your downloads folder.');
+      }
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') {
+        console.error('Error sharing receipt:', err);
+        alert('Failed to share receipt. Please try downloading instead.');
+      }
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -208,46 +332,95 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Orders
         </Link>
-        <div className="flex justify-between items-start">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{order.orderNumber}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{order.orderNumber}</h1>
             <p className="text-gray-600 mt-2">
               Created on {new Date(order.createdAt).toLocaleDateString()}
             </p>
           </div>
-          <button
-            onClick={handlePrint}
-            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition flex items-center gap-2"
-          >
-            <Printer className="w-5 h-5" />
-            Print Receipt
-          </button>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={handleShare}
+              disabled={downloading}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center gap-2 disabled:opacity-50 text-sm sm:text-base"
+            >
+              {downloading ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-5 h-5" />
+                  Share
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleDownload}
+              disabled={downloading}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2 disabled:opacity-50 text-sm sm:text-base"
+            >
+              {downloading ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  Downloading...
+                </>
+              ) : (
+                <>
+                  <Download className="w-5 h-5" />
+                  Download
+                </>
+              )}
+            </button>
+            <button
+              onClick={handlePrint}
+              className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition flex items-center gap-2 text-sm sm:text-base"
+            >
+              <Printer className="w-5 h-5" />
+              Print
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Receipt View */}
-      <div className="bg-white rounded-lg shadow-md p-8 mb-6">
-        {/* Header for Print */}
-        <div className="hidden print:block text-center mb-6">
-          <h1 className="text-2xl font-bold">Laundry Management System</h1>
-          <p className="text-gray-600">Order Receipt</p>
+      <div ref={receiptRef} className="bg-white rounded-lg shadow-md p-8 mb-6 no-page-break">
+        {/* Company Header - Always visible for PDF/Print */}
+        <div className="text-center mb-8 pb-6 border-b-2 border-gray-800">
+          <div className="flex items-center justify-center mb-3">
+            <div className="bg-blue-600 text-white p-3 rounded-full mr-3">
+              <Package className="w-8 h-8" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">LaundryMS</h1>
+              <p className="text-sm text-gray-600">Professional Laundry Services</p>
+            </div>
+          </div>
+
+          <div className="mt-4 text-sm text-gray-600 space-y-1">
+            <p>📍 123 Business Street, Commercial Area, Lagos, Nigeria</p>
+            <p>📞 +234 800 123 4567 | 📧 info@laundryms.com</p>
+            <p>🌐 www.laundryms.com</p>
+          </div>
+
+          <div className="mt-4">
+            <h2 className="text-xl font-semibold text-gray-900">ORDER RECEIPT</h2>
+          </div>
         </div>
 
         {/* Order Info */}
-        <div className="grid grid-cols-2 gap-6 mb-6 pb-6 border-b print:grid-cols-3">
+        <div className="grid grid-cols-2 gap-6 mb-6 pb-6 border-b">
           <div>
             <p className="text-sm text-gray-600">Order Number</p>
             <p className="font-semibold text-lg">{order.orderNumber}</p>
           </div>
           <div>
             <p className="text-sm text-gray-600">Status</p>
-            <span className={`inline-block px-3 py-1 text-sm font-semibold rounded-full ${getStatusColor(order.status)} print:border print:border-gray-400`}>
+            <span className={`inline-block px-3 py-1 text-sm font-semibold rounded-full status-badge ${getStatusColor(order.status)}`}>
               {order.status.replace("_", " ").toUpperCase()}
             </span>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Service Type</p>
-            <p className="font-semibold">{formatServiceType(order.serviceType)}</p>
           </div>
           <div>
             <p className="text-sm text-gray-600">Order Date</p>
@@ -290,6 +463,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
             <thead>
               <tr className="border-b">
                 <th className="text-left py-2 text-sm text-gray-600">Item</th>
+                <th className="text-left py-2 text-sm text-gray-600">Service</th>
                 <th className="text-center py-2 text-sm text-gray-600">Quantity</th>
                 <th className="text-right py-2 text-sm text-gray-600">Price</th>
                 <th className="text-right py-2 text-sm text-gray-600">Subtotal</th>
@@ -299,6 +473,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
               {order.items.map((item) => (
                 <tr key={item.id} className="border-b last:border-0">
                   <td className="py-3">{item.itemType}</td>
+                  <td className="py-3 text-sm text-gray-600">{formatServiceType(item.serviceType)}</td>
                   <td className="py-3 text-center">{item.quantity}</td>
                   <td className="py-3 text-right">₦{item.price.toLocaleString()}</td>
                   <td className="py-3 text-right font-medium">
@@ -340,15 +515,54 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
         {/* Notes */}
         {order.notes && (
           <div className="mb-6 pb-6 border-t pt-6">
-            <h3 className="font-semibold text-gray-900 mb-2">Notes</h3>
-            <p className="text-gray-700">{order.notes}</p>
+            <h3 className="font-semibold text-gray-900 mb-2">Special Instructions</h3>
+            <p className="text-gray-700 italic">{order.notes}</p>
           </div>
         )}
 
-        {/* Footer for Print */}
-        <div className="hidden print:block text-center pt-6 border-t">
-          <p className="text-sm text-gray-600">Thank you for your business!</p>
-          <p className="text-xs text-gray-500 mt-2">This is a computer-generated receipt</p>
+        {/* Payment History */}
+        {order.payments.length > 0 && (
+          <div className="mb-6 pb-6 border-t pt-6">
+            <h3 className="font-semibold text-gray-900 mb-3">Payment History</h3>
+            <div className="space-y-2">
+              {order.payments.map((payment) => (
+                <div
+                  key={payment.id}
+                  className="flex justify-between items-center text-sm p-3 bg-gray-50 rounded border"
+                >
+                  <div>
+                    <span className="font-medium text-gray-900">₦{payment.amount.toLocaleString()}</span>
+                    <span className="text-gray-600 ml-3">via {payment.method.replace("_", " ")}</span>
+                  </div>
+                  <span className="text-gray-500">
+                    {new Date(payment.date).toLocaleDateString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Terms and Footer */}
+        <div className="mt-8 pt-6 border-t-2 border-gray-800">
+          <div className="text-sm text-gray-600 space-y-2 mb-4">
+            <p className="font-semibold text-gray-900">Terms & Conditions:</p>
+            <ul className="list-disc list-inside space-y-1 text-xs">
+              <li>Items not collected within 30 days will be donated to charity</li>
+              <li>Claims must be made within 24 hours of collection</li>
+              <li>We are not responsible for items left in pockets</li>
+              <li>Damaged items beyond repair will be compensated at 10x the cleaning cost</li>
+            </ul>
+          </div>
+
+          <div className="text-center pt-4 border-t">
+            <p className="text-lg font-semibold text-gray-900">Thank You for Your Business!</p>
+            <p className="text-sm text-gray-600 mt-2">We look forward to serving you again</p>
+            <p className="text-xs text-gray-500 mt-3">
+              Receipt generated on {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString()}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">This is a computer-generated receipt and requires no signature</p>
+          </div>
         </div>
       </div>
 
@@ -383,30 +597,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
 
         {/* Payment Section */}
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Management</h3>
-
-          {/* Payment History */}
-          {order.payments.length > 0 && (
-            <div className="mb-4">
-              <p className="text-sm font-medium text-gray-700 mb-2">Payment History:</p>
-              <div className="space-y-2">
-                {order.payments.map((payment) => (
-                  <div
-                    key={payment.id}
-                    className="flex justify-between items-center text-sm p-2 bg-gray-50 rounded"
-                  >
-                    <div>
-                      <span className="font-medium">₦{payment.amount.toLocaleString()}</span>
-                      <span className="text-gray-600 ml-2">({payment.method})</span>
-                    </div>
-                    <span className="text-gray-500">
-                      {new Date(payment.date).toLocaleDateString()}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Add Payment</h3>
 
           {/* Add Payment Form */}
           {balance > 0 && (

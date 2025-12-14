@@ -57,6 +57,7 @@ export function generateOrderNumber(): string {
 // Calculate order totals
 export interface OrderItem {
   itemType: string;
+  serviceType: string;
   quantity: number;
   price: number;
 }
@@ -132,6 +133,9 @@ export function validateOrderItems(items: OrderItem[]): {
   for (const item of items) {
     if (!item.itemType || !item.itemType.trim()) {
       return { valid: false, error: "Item type is required for all items" };
+    }
+    if (!item.serviceType || !item.serviceType.trim()) {
+      return { valid: false, error: "Service type is required for all items" };
     }
     if (!item.quantity || item.quantity <= 0) {
       return { valid: false, error: "Quantity must be greater than 0" };

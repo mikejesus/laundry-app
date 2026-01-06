@@ -7,9 +7,13 @@ const protectedRoutes = ["/dashboard"];
 // Routes that should redirect to dashboard if already authenticated
 const authRoutes = ["/sign-in", "/sign-up"];
 
+// Routes that require super admin role
+const adminRoutes = ["/dashboard/admin"];
+
 export default auth((req) => {
   const { nextUrl } = req;
   const isLoggedIn = !!req.auth;
+  const userRole = req.auth?.user?.role;
 
   const isProtectedRoute = protectedRoutes.some((route) =>
     nextUrl.pathname.startsWith(route)
@@ -19,11 +23,20 @@ export default auth((req) => {
     (route) => nextUrl.pathname === route || nextUrl.pathname.startsWith(route)
   );
 
+  const isAdminRoute = adminRoutes.some((route) =>
+    nextUrl.pathname.startsWith(route)
+  );
+
   // Redirect to sign-in if accessing protected route without auth
   if (isProtectedRoute && !isLoggedIn) {
     const signInUrl = new URL("/sign-in", nextUrl.origin);
     signInUrl.searchParams.set("callbackUrl", nextUrl.pathname);
     return NextResponse.redirect(signInUrl);
+  }
+
+  // Redirect to dashboard if not super admin trying to access admin routes
+  if (isAdminRoute && isLoggedIn && userRole !== "super_admin") {
+    return NextResponse.redirect(new URL("/dashboard", nextUrl.origin));
   }
 
   // Redirect to dashboard if accessing auth routes while logged in

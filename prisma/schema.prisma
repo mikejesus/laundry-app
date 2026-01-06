@@ -58,7 +58,11 @@ model User {
   firstName     String?
   lastName      String?
   image         String?
-  role          String    @default("user") // user, admin, manager
+  role          String    @default("user") // user, admin, manager, super_admin
+  status        String    @default("active") // active, inactive
+  lastLoginAt   DateTime?
+  passwordResetToken   String?
+  passwordResetExpires DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -78,6 +82,8 @@ model User {
 
   @@index([email])
   @@index([role])
+  @@index([status])
+  @@index([passwordResetToken])
 }
 
 // Customer management

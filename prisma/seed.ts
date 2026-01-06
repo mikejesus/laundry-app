@@ -9,6 +9,26 @@ async function main() {
   // Hash the demo password
   const hashedPassword = await bcrypt.hash('demo123', 12);
 
+  // Create super admin user
+  const superAdminPassword = await bcrypt.hash('SuperAdmin@2026!Secure#', 12);
+  const superAdmin = await prisma.user.upsert({
+    where: { email: 'olawuni.michael@gmail.com' },
+    update: {
+      role: 'super_admin', // Ensure role is updated if user exists
+      status: 'active',
+    },
+    create: {
+      email: 'olawuni.michael@gmail.com',
+      password: superAdminPassword,
+      firstName: 'Michael',
+      lastName: 'Olawuni',
+      role: 'super_admin',
+      status: 'active',
+    },
+  });
+
+  console.log('Created/Updated super admin user:', superAdmin);
+
   // Create a demo user
   const demoUser = await prisma.user.upsert({
     where: { email: 'demo@laundry.com' },

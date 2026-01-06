@@ -18,9 +18,11 @@ import {
   ChevronDown,
   Menu,
   X,
+  ShieldCheck,
+  Settings,
 } from "lucide-react";
 
-const navigation = [
+const baseNavigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
   { name: "Customers", href: "/dashboard/customers", icon: Users },
@@ -31,12 +33,22 @@ const navigation = [
   { name: "Payments", href: "/dashboard/payments", icon: Package },
 ];
 
+const adminNavigation = [
+  { name: "Admin", href: "/dashboard/admin/users", icon: ShieldCheck, requiredRole: "super_admin" },
+];
+
 export default function Navbar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Build navigation based on user role
+  const navigation = [
+    ...baseNavigation,
+    ...(session?.user?.role === "super_admin" ? adminNavigation : []),
+  ];
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -174,6 +186,15 @@ export default function Navbar() {
                     Profile
                   </Link>
 
+                  <Link
+                    href="/dashboard/settings"
+                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    onClick={() => setIsDropdownOpen(false)}
+                  >
+                    <Settings className="w-4 h-4 mr-3" />
+                    Settings
+                  </Link>
+
                   <button
                     onClick={handleSignOut}
                     className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
@@ -272,6 +293,13 @@ export default function Navbar() {
             >
               <User className="w-4 h-4 mr-3" />
               Profile
+            </Link>
+            <Link
+              href="/dashboard/settings"
+              className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg mb-2"
+            >
+              <Settings className="w-4 h-4 mr-3" />
+              Settings
             </Link>
             <button
               onClick={handleSignOut}

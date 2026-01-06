@@ -50,6 +50,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           throw new Error("Invalid email or password");
         }
 
+        // Check if user is active
+        if (user.status === "inactive") {
+          throw new Error("Account is inactive. Please contact administrator");
+        }
+
         const isPasswordValid = await bcrypt.compare(
           credentials.password as string,
           user.password
@@ -58,6 +63,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!isPasswordValid) {
           throw new Error("Invalid email or password");
         }
+
+        // Update last login time
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lastLoginAt: new Date() },
+        });
 
         return {
           id: user.id,
@@ -134,6 +145,7 @@ export const ROLES = {
   USER: "user",
   MANAGER: "manager",
   ADMIN: "admin",
+  SUPER_ADMIN: "super_admin",
 } as const;
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];
@@ -144,9 +156,21 @@ export function hasRole(userRole: string, requiredRole: string): boolean {
     [ROLES.USER]: 1,
     [ROLES.MANAGER]: 2,
     [ROLES.ADMIN]: 3,
+    [ROLES.SUPER_ADMIN]: 4,
   };
 
   return (roleHierarchy[userRole as Role] || 0) >= (roleHierarchy[requiredRole as Role] || 0);
+}
+
+// Helper to check if user is super admin
+export async function requireSuperAdmin() {
+  const user = await requireUser();
+
+  if (user.role !== ROLES.SUPER_ADMIN) {
+    throw new Error("Forbidden: Super admin access required");
+  }
+
+  return user;
 }
 
 // Register a new user

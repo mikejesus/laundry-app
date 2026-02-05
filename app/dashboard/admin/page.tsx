@@ -35,7 +35,7 @@ export default function AdminDashboardPage() {
   // Check if user is super admin
   useEffect(() => {
     if (status === "authenticated" && session?.user?.role !== "super_admin") {
-      showToast("Access denied. Super admin privileges required.", "error");
+      showToast("error", "Access denied. Super admin privileges required.");
       router.push("/dashboard");
     }
   }, [status, session, router, showToast]);
@@ -58,7 +58,7 @@ export default function AdminDashboardPage() {
       const data = await response.json();
       setUsers(data);
     } catch (error: any) {
-      showToast(error.message || "Failed to fetch users", "error");
+      showToast("error", error.message || "Failed to fetch users");
     } finally {
       setLoading(false);
     }

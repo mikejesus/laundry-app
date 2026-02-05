@@ -419,7 +419,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
           <div>
             <p className="text-sm text-gray-600">Status</p>
             <span className={`inline-block px-3 py-1 text-sm font-semibold rounded-full status-badge ${getStatusColor(order.status)}`}>
-              {order.status.replace("_", " ").toUpperCase()}
+              {order.status?.replace("_", " ").toUpperCase() || "N/A"}
             </span>
           </div>
           <div>
@@ -532,7 +532,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                 >
                   <div>
                     <span className="font-medium text-gray-900">₦{payment.amount.toLocaleString()}</span>
-                    <span className="text-gray-600 ml-3">via {payment.method.replace("_", " ")}</span>
+                    <span className="text-gray-600 ml-3">via {payment.method?.replace("_", " ") || "N/A"}</span>
                   </div>
                   <span className="text-gray-500">
                     {new Date(payment.date).toLocaleDateString()}

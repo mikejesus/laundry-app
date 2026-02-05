@@ -162,7 +162,7 @@ export async function sendWelcomeEmail({
       from: "LaundryMS <onboarding@resend.dev>",
       to: email,
       subject: "Welcome to LaundryMS",
-      html: getWelcomeEmailTemplate(firstName, temporaryPassword),
+      html: getWelcomeEmailTemplate(firstName, temporaryPassword, email),
     });
 
     if (error) {
@@ -178,7 +178,7 @@ export async function sendWelcomeEmail({
   }
 }
 
-function getWelcomeEmailTemplate(firstName?: string | null, temporaryPassword?: string): string {
+function getWelcomeEmailTemplate(firstName?: string | null, temporaryPassword?: string, email?: string): string {
   const greeting = firstName ? `Hi ${firstName}` : "Hello";
 
   return `

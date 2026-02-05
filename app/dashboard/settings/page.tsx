@@ -29,27 +29,27 @@ export default function SettingsPage() {
 
   const validateForm = () => {
     if (!formData.currentPassword) {
-      showToast("Current password is required", "error");
+      showToast("error", "Current password is required");
       return false;
     }
 
     if (!formData.newPassword) {
-      showToast("New password is required", "error");
+      showToast("error", "New password is required");
       return false;
     }
 
     if (formData.newPassword.length < 8) {
-      showToast("New password must be at least 8 characters long", "error");
+      showToast("error", "New password must be at least 8 characters long");
       return false;
     }
 
     if (formData.newPassword === formData.currentPassword) {
-      showToast("New password must be different from current password", "error");
+      showToast("error", "New password must be different from current password");
       return false;
     }
 
     if (formData.newPassword !== formData.confirmPassword) {
-      showToast("Passwords do not match", "error");
+      showToast("error", "Passwords do not match");
       return false;
     }
 
@@ -80,7 +80,7 @@ export default function SettingsPage() {
         throw new Error(data.error || "Failed to change password");
       }
 
-      showToast("Password changed successfully", "success");
+      showToast("success", "Password changed successfully");
 
       // Reset form
       setFormData({
@@ -89,7 +89,7 @@ export default function SettingsPage() {
         confirmPassword: "",
       });
     } catch (error: any) {
-      showToast(error.message || "An error occurred", "error");
+      showToast("error", error.message || "An error occurred");
     } finally {
       setLoading(false);
     }

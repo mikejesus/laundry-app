@@ -49,7 +49,7 @@ export default function UsersManagementPage() {
   // Check if user is super admin
   useEffect(() => {
     if (status === "authenticated" && session?.user?.role !== "super_admin") {
-      showToast("Access denied. Super admin privileges required.", "error");
+      showToast("error", "Access denied. Super admin privileges required.");
       router.push("/dashboard");
     }
   }, [status, session, router, showToast]);
@@ -76,7 +76,7 @@ export default function UsersManagementPage() {
       const data = await response.json();
       setUsers(data);
     } catch (error: any) {
-      showToast(error.message || "Failed to fetch users", "error");
+      showToast("error", error.message || "Failed to fetch users");
     } finally {
       setLoading(false);
     }
@@ -133,10 +133,10 @@ export default function UsersManagementPage() {
         throw new Error(data.error || "Failed to delete user");
       }
 
-      showToast("User deleted successfully", "success");
+      showToast("success", "User deleted successfully");
       fetchUsers();
     } catch (error: any) {
-      showToast(error.message || "Failed to delete user", "error");
+      showToast("error", error.message || "Failed to delete user");
     } finally {
       setDeletingUserId(null);
     }
@@ -158,10 +158,10 @@ export default function UsersManagementPage() {
         throw new Error(data.error || "Failed to update user status");
       }
 
-      showToast(`User ${newStatus === "active" ? "activated" : "deactivated"} successfully`, "success");
+      showToast("success", `User ${newStatus === "active" ? "activated" : "deactivated"} successfully`);
       fetchUsers();
     } catch (error: any) {
-      showToast(error.message || "Failed to update user status", "error");
+      showToast("error", error.message || "Failed to update user status");
     }
   };
 

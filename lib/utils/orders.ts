@@ -94,13 +94,15 @@ export function getPaymentStatus(totalAmount: number, paidAmount: number): {
 }
 
 // Get status color
-export function getStatusColor(status: string): string {
+export function getStatusColor(status: string | null | undefined): string {
+  if (!status) return "bg-gray-100 text-gray-800";
   const statusObj = ORDER_STATUSES.find(s => s.value === status);
   return statusObj?.color || "bg-gray-100 text-gray-800";
 }
 
 // Format service type for display
-export function formatServiceType(serviceType: string): string {
+export function formatServiceType(serviceType: string | null | undefined): string {
+  if (!serviceType) return "N/A";
   const service = SERVICE_TYPES.find(s => s.value === serviceType);
   return service?.label || serviceType.replace(/_/g, " ");
 }

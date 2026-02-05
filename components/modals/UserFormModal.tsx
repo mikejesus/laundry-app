@@ -61,29 +61,29 @@ export default function UserFormModal({ user, onClose }: UserFormModalProps) {
 
   const validateForm = () => {
     if (!formData.email) {
-      showToast("Email is required", "error");
+      showToast("error", "Email is required");
       return false;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      showToast("Invalid email format", "error");
+      showToast("error", "Invalid email format");
       return false;
     }
 
     if (!isEditing && !formData.password) {
-      showToast("Password is required for new users", "error");
+      showToast("error", "Password is required for new users");
       return false;
     }
 
     if (formData.password) {
       if (formData.password.length < 8) {
-        showToast("Password must be at least 8 characters long", "error");
+        showToast("error", "Password must be at least 8 characters long");
         return false;
       }
 
       if (formData.password !== formData.confirmPassword) {
-        showToast("Passwords do not match", "error");
+        showToast("error", "Passwords do not match");
         return false;
       }
     }
@@ -134,12 +134,12 @@ export default function UserFormModal({ user, onClose }: UserFormModalProps) {
       }
 
       showToast(
-        `User ${isEditing ? "updated" : "created"} successfully`,
-        "success"
+        "success",
+        `User ${isEditing ? "updated" : "created"} successfully`
       );
       onClose();
     } catch (error: any) {
-      showToast(error.message || "An error occurred", "error");
+      showToast("error", error.message || "An error occurred");
     } finally {
       setLoading(false);
     }
